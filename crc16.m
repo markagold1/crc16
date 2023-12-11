@@ -1,18 +1,18 @@
-function [crc,cfgout,crctable] = crc16(octets,cfg)
-% Usage: [crc,cfgout,crctable] = crc16(octets,cfg)
+function [crc,cfg,crctable] = crc16(octets,cfgin)
+% Usage: [crc,cfg,crctable] = crc16(octets,cfgin)
 %
-% Compute CRC-16 (CCITT) of a vector of unsigned bytes
+% Compute CRC-16 of a vector of unsigned bytes
 %
 % octets.............input vector of unsigned bytes
-% cfg................optional struct to customize CRC-16 parameters
+% cfgin..............optional struct to customize CRC-16 parameters
 %   poly.............scalar CRC polynomial [0-0xffff] (default=0x1021)
 %   init.............scalar initial shift register value [0-0xffff] (default=0)
 %   refin............bool input reflection [0 or 1] (default=0)
 %   refout...........bool output reflection [0 or 1] (default=0)
 %   xorout...........scalar XOR'd with final CRC before returning (default=0)
 % crc................output: computed CRC-16
-% cfgout.............output: struct of configuration used to compute CRC 
-%   cfgout contains the same members as cfg input struct
+% cfg................output: struct of configuration used to compute CRC 
+%   cfg contains the same members as cfgin input struct
 % crctable...........output: lookup table for fast CRC calculation
 %
 % CRC default parameters:
@@ -22,58 +22,51 @@ function [crc,cfgout,crctable] = crc16(octets,cfg)
 %  - output reflection: no
 %  - output Xor: no
 %
-% Note: If the length of your data in bits is not an integer 
-%       number of bytes, prepend 0 bits to get a multiple
-%       of 8 bits.
+% Examples:
 %
-% Example:
+%  1. CRC16 using default parameters corresponding to CRC-16/XMODEM:
+%     crc = crc16(uint8('123456789'));
+%     disp(dec2hex(crc))
+%     31C3
 %
-% in = hex2dec(['31';'32';'33';'34';'35';'36';'37';'38';'39'])
-% crc = crc16(in);
-% dec2hex(crc)
-% ans =
-%     '31C3'
+%  2. CRC-16/KERMIT often identified as CRC-16/CCITT:
+%     crc = crc16(uint8('123456789'), struct('refin',1,'refout',1));
+%     disp(dec2hex(crc))
+%     2189
 %
-% Compare to: 
+%  3. CRC-16/MODBUS:
+%     cfg = struct('poly',0x8005,'init',0xffff,'refin',1,'refout',1,'xorout',0);
+%     crc = crc16(uint8('123456789'),cfg);
+%     disp(dec2hex(crc))
+%     4B37
+%
+% Compare to the following online calculators: 
 %   http://www.sunshine2k.de/coding/javascript/crc/crc_js.html
-% and/or:
-%   https://reveng.sourceforge.io/crc-catalogue/16.htm
-% and/or:
 %   https://crccalc.com/ 
 %
-% Reference:
+% References:
+%  https://reveng.sourceforge.io/crc-catalogue/16.htm
 %  https://www.drdobbs.com/tools/understanding-crcs/184410177
 %
 
     persistent Crc16Table
     persistent lastPoly
 
-    % Inputs
-    narginchk(1,2);
-    if nargin == 1
+    % Validate inputs
+    narginchk(0,2);
+    if nargin == 0 || ~isa(cfgin,'struct')
+        crc = zeros(0,1);
         cfg = struct();
-        cfg.poly = 4129; % 0x1021
-        cfg.init = 0;
-        cfg.refin = 0;
-        cfg.refout = 0;
-        cfg.xorout = 0;
+        crctable = [];
+        help crc16
+        return
+    elseif nargin == 1
+        cfgin = struct();
     end
-    if ~isfield(cfg,'poly')
-        cfg.poly = 4129; % 0x1021
-    end
-    if ~isfield(cfg,'init')
-        cfg.init = 0;
-    end
-    if ~isfield(cfg,'refin')
-        cfg.refin = 0;
-    end
-    if ~isfield(cfg,'refout')
-        cfg.refout = 0;
-    end
-    if ~isfield(cfg,'xorout')
-        cfg.xorout = 0;
-    end
-   cfgout = cfg;
+
+    % Setup algorithm parameters
+    cfg = parse_inputs(cfgin,nargin);
+    octets = double(uint8(octets)); % cast avoids bitxor() warnings
 
     % CRC LUT
     if isempty(Crc16Table) || length(Crc16Table) ~= 256 ...
@@ -84,7 +77,7 @@ function [crc,cfgout,crctable] = crc16(octets,cfg)
 
     % Input reflection
     if cfg.refin
-        octets = reflect(uint8(octets));
+        octets = reflect(octets);
     end
 
     % CRC-16
@@ -95,7 +88,6 @@ function [crc,cfgout,crctable] = crc16(octets,cfg)
         idx = bitand(bitxor(bitshift(crc, -8), octets(ii)), ff);
         crc = bitand(bitxor(Crc16Table(idx + 1), bitshift(crc, 8)), ffff);
     end
-    crc = bitand(crc, ffff);
 
     % Output reflection
     if cfg.refout
@@ -109,7 +101,7 @@ function [crc,cfgout,crctable] = crc16(octets,cfg)
 
 end % function
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Generate CRC16 fast lookup table
 function lut = buildTable(poly)
@@ -166,5 +158,30 @@ function ref = reflect(d)
     else  % treat as uint8
         ref = reflTable(d(:)+1);
     end
+end % function
 
+% Setup algorithm parameters
+function cfg = parse_inputs(cfg,N)
+    if N == 1
+        cfg.poly = 4129; % 0x1021
+        cfg.init = 0;
+        cfg.refin = 0;
+        cfg.refout = 0;
+        cfg.xorout = 0;
+    end
+    if ~isfield(cfg,'poly')
+        cfg.poly = 4129; % 0x1021
+    end
+    if ~isfield(cfg,'init')
+        cfg.init = 0;
+    end
+    if ~isfield(cfg,'refin')
+        cfg.refin = 0;
+    end
+    if ~isfield(cfg,'refout')
+        cfg.refout = 0;
+    end
+    if ~isfield(cfg,'xorout')
+        cfg.xorout = 0;
+    end
 end % function

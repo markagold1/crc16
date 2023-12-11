@@ -6,7 +6,7 @@ function test_crc16()
 % https://reveng.sourceforge.io/crc-catalogue/16.htm
 %
  
-    in = double(0x31:0x39);
+    in = uint8('123456789');
     lines = reference();
     for kk = 1:size(lines,1)
         eval(lines(kk,:));
