@@ -45,6 +45,6 @@ disp(dec2hex(crc))
 1. **[Greg Cook's CRC-16 Catalog](https://reveng.sourceforge.io/crc-catalogue/16.htm)**  
 2. **[Dr. Dobb's Understanding CRCs](https://www.drdobbs.com/tools/understanding-crcs/184410177)**  
 3. **[Sunshine Online CRC Calculator](http://www.sunshine2k.de/coding/javascript/crc/crc_js.html)**  
-4. **[Online CRC-8 CRC-16 CRC-32 Calculator](https://www.drdobbs.com/tools/understanding-crcs/184410177)**  
+4. **[Online CRC-8 CRC-16 CRC-32 Calculator](https://crccalc.com/)**  
 
 > Written with [StackEdit](https://stackedit.io/).
