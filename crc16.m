@@ -54,7 +54,7 @@ function [crc,cfg,crctable] = crc16(octets,cfgin)
 
     % Validate inputs
     narginchk(0,2);
-    if nargin == 0 || ~isa(cfgin,'struct')
+    if nargin == 0 || (nargin == 2 && ~isa(cfgin,'struct'))
         crc = zeros(0,1);
         cfg = struct();
         crctable = [];
